@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>form</title>
+</head>
+
+<body>
+<form action="post" method="post" name="google-sheet">
+<h1>informetion form</h1>
+<h2>fill this form</h2>
+<p>Name:*<input type="test" name="Name"id=""required ></p>
+  <label><b>Gender*</b></label>
+<p>
+  Male<input type="radio" name="Gender" value="Male"  >
+  Female<input type="radio" name="Gender" value="Female" >
+</p>
+
+<p>Address:*<textarea name="Address" id="Address" cols="100" rows="8"required ></textarea></p>
+<p>Email*:<input type="Email" name="Email"id="Email"required></p>
+<p>Pincod*:<input type="Number" name="Pincod" id="Pincod"required ></p>
+<input type="submit" value="submit">
+</form>
+
+
+
+<script>
+            const scriptURL = 'https://script.google.com/macros/s/AKfycby0Xn7kz-2USGyFNpRpdGwWWd6pvbaPWJlvyh6GZEiCpnLsLm-UQ-qke5kJBUf1jZWp/exec'
+            const form = document.forms['google-sheet']
+          
+            form.addEventListener('submit', e => {
+              e.preventDefault()
+              fetch(scriptURL, { method: 'POST', body: new FormData(form)})
+                .then(response => alert("Thanks for Contacting us..! We Will Contact You Soon..."))
+                .catch(error => console.error('Error!', error.message))
+            })
+          </script>
+
+
+</body>
+
+</html>
