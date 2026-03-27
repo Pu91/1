@@ -1,44 +1,181 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="bn">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>form</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bulk Product Scanner</title>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background-color: #f4f7f9; margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center; }
+        .container { width: 100%; max-width: 700px; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
+        
+        #camera-area { width: 100%; height: 250px; background: #000; border-radius: 10px; overflow: hidden; margin-bottom: 15px; position: relative; }
+        video { width: 100%; height: 100%; object-fit: cover; }
+        
+        .controls { display: flex; gap: 10px; margin-bottom: 20px; }
+        button { flex: 1; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .btn-scan { background: #007bff; color: white; }
+        .btn-upload { background: #6c757d; color: white; }
+        .btn-save { background: #28a745; color: white; width: 100%; margin-top: 20px; font-size: 16px; }
+
+        /* Scanned Table List */
+        .scanned-list { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .scanned-list th, .scanned-list td { padding: 10px; border-bottom: 1px solid #ddd; text-align: left; }
+        .scanned-list th { background: #f8f9fa; font-size: 13px; color: #555; }
+        input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+        
+        .status { text-align: center; color: #007bff; font-weight: bold; margin: 10px 0; }
+        .delete-btn { background: #ff4d4d; color: white; padding: 5px 10px; border-radius: 4px; border: none; font-size: 12px; }
+        canvas { display: none; }
+    </style>
 </head>
-
 <body>
-<form action="post" method="post" name="google-sheet">
-<h1>informetion form</h1>
-<h2>fill this form</h2>
-<p>Name:*<input type="test" name="Name"id=""required ></p>
-  <label><b>Gender*</b></label>
-<p>
-  Male<input type="radio" name="Gender" value="Male"  >
-  Female<input type="radio" name="Gender" value="Female" >
-</p>
 
-<p>Address:*<textarea name="Address" id="Address" cols="100" rows="8"required ></textarea></p>
-<p>Email*:<input type="Email" name="Email"id="Email"required></p>
-<p>Pincod*:<input type="Number" name="Pincod" id="Pincod"required ></p>
-<input type="submit" value="submit">
-</form>
+<div class="container">
+    <h2 style="text-align: center; margin-top: 0;">Bulk Table Scanner</h2>
 
+    <div id="camera-area">
+        <video id="video" autoplay playsinline></video>
+    </div>
 
+    <div class="controls">
+        <button class="btn-scan" id="captureBtn">📸 Scan Entire Table</button>
+        <button class="btn-upload" onclick="document.getElementById('fileInput').click()">📁 Upload</button>
+        <input type="file" id="fileInput" accept="image/*" style="display:none;">
+    </div>
 
-<script>
-            const scriptURL = 'https://script.google.com/macros/s/AKfycby0Xn7kz-2USGyFNpRpdGwWWd6pvbaPWJlvyh6GZEiCpnLsLm-UQ-qke5kJBUf1jZWp/exec'
-            const form = document.forms['google-sheet']
-          
-            form.addEventListener('submit', e => {
-              e.preventDefault()
-              fetch(scriptURL, { method: 'POST', body: new FormData(form)})
-                .then(response => alert("Thanks for Contacting us..! We Will Contact You Soon..."))
-                .catch(error => console.error('Error!', error.message))
-            })
-          </script>
+    <div id="status" class="status">Ready to scan...</div>
 
+    <!-- Scanned Items View -->
+    <table class="scanned-list">
+        <thead>
+            <tr>
+                <th style="width: 40%;">Name</th>
+                <th style="width: 25%;">Price</th>
+                <th style="width: 20%;">Qty</th>
+                <th style="width: 15%;">Action</th>
+            </tr>
+        </thead>
+        <tbody id="resultBody">
+            <!-- Rows will be added here dynamically -->
+        </tbody>
+    </table>
+
+    <button class="btn-save" id="saveAllBtn" style="display: none;">Save All to Firebase</button>
+</div>
+
+<canvas id="canvas"></canvas>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    // Firebase Config
+    const firebaseConfig = {
+        apiKey: "AIzaSyD_MJAYCk5JZuOn6_YwsBC86gBKxwC_EKY",
+        authDomain: "cosmatic-a7f73.firebaseapp.com",
+        databaseURL: "https://cosmatic-a7f73-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "cosmatic-a7f73",
+        storageBucket: "cosmatic-a7f73.firebasestorage.app",
+        messagingSenderId: "693000942896",
+        appId: "1:693000942896:web:5208e137c75e62749c44f5",
+        measurementId: "G-L7FNN9G0NY"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const video = document.getElementById('video');
+    const resultBody = document.getElementById('resultBody');
+    const status = document.getElementById('status');
+    const saveAllBtn = document.getElementById('saveAllBtn');
+
+    // Start Camera
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+        .then(stream => video.srcObject = stream);
+
+    // OCR function for multiple rows
+    async function scanImage(source) {
+        status.innerText = "Processing multiple rows... please wait";
+        try {
+            const result = await Tesseract.recognize(source, 'eng');
+            const lines = result.data.text.split('\n').map(l => l.trim()).filter(l => l.length > 2);
+            
+            // Filter out headers like "Name", "Price", "Example"
+            const filteredLines = lines.filter(line => !/Name|Price|Quantity|Example/i.test(line));
+
+            filteredLines.forEach(line => {
+                const parts = line.split(/\s+/);
+                if (parts.length >= 2) {
+                    const name = parts[0];
+                    const price = parts[1] || "0";
+                    const qty = parts[2] || "1";
+                    addRowToTable(name, price, qty);
+                }
+            });
+
+            status.innerText = "Scan Complete! Check the list below.";
+            saveAllBtn.style.display = "block";
+        } catch (e) {
+            status.innerText = "Error: " + e.message;
+        }
+    }
+
+    // Function to add a row to the HTML table
+    function addRowToTable(name, price, qty) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><input type="text" value="${name}" class="row-name"></td>
+            <td><input type="text" value="${price}" class="row-price"></td>
+            <td><input type="number" value="${qty}" class="row-qty"></td>
+            <td><button class="delete-btn" onclick="this.parentElement.parentElement.remove()">Del</button></td>
+        `;
+        resultBody.appendChild(tr);
+    }
+
+    // Capture Event
+    document.getElementById('captureBtn').addEventListener('click', () => {
+        const canvas = document.getElementById('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        scanImage(canvas.toDataURL('image/png'));
+    });
+
+    // Upload Event
+    document.getElementById('fileInput').addEventListener('change', (e) => {
+        const reader = new FileReader();
+        reader.onload = () => scanImage(reader.result);
+        reader.readAsDataURL(e.target.files[0]);
+    });
+
+    // Save All to Firebase
+    saveAllBtn.addEventListener('click', async () => {
+        const rows = document.querySelectorAll('#resultBody tr');
+        if (rows.length === 0) return alert("No items to save!");
+
+        status.innerText = "Saving all items to Firebase...";
+        
+        try {
+            for (let row of rows) {
+                const name = row.querySelector('.row-name').value;
+                const price = row.querySelector('.row-price').value;
+                const qty = row.querySelector('.row-qty').value;
+
+                await addDoc(collection(db, "medicine_inventory"), {
+                    name, price, qty, timestamp: serverTimestamp()
+                });
+            }
+            alert("All items saved successfully!");
+            resultBody.innerHTML = "";
+            saveAllBtn.style.display = "none";
+            status.innerText = "Ready to scan...";
+        } catch (e) {
+            alert("Error saving: " + e.message);
+        }
+    });
+</script>
 
 </body>
-
-</html>
+  </html>
