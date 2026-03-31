@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RapidGo - Captain Portal</title>
+    <title>RapidGo Captain - Fixed</title>
     
-    <!-- CSS Dependencies -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -14,120 +13,101 @@
     <style>
         :root { --primary: #FFD700; --dark: #121212; --green: #28a745; --white: #fff; }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
-        body { background: #f0f0f0; overflow-x: hidden; }
+        body { background: #f0f0f0; }
 
-        /* Header & Profile */
-        header { background: var(--dark); padding: 15px; display: flex; justify-content: space-between; align-items: center; color: var(--primary); position: sticky; top: 0; z-index: 1000; }
-        .captain-id { font-size: 12px; color: #aaa; }
-        .profile-icon { width: 35px; height: 35px; background: var(--primary); border-radius: 50%; display: flex; justify-content: center; align-items: center; color: #000; }
+        header { background: var(--dark); padding: 15px; display: flex; justify-content: space-between; align-items: center; color: var(--primary); }
+        #map { height: 350px; width: 100%; border-bottom: 4px solid var(--primary); }
 
-        /* Earnings Dashboard */
-        .earnings-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; padding: 15px; }
-        .earn-card { background: var(--white); padding: 15px 10px; border-radius: 12px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-        .earn-card h4 { font-size: 11px; color: #666; margin-bottom: 5px; }
-        .earn-card p { font-size: 14px; font-weight: bold; color: var(--dark); }
+        /* Dashboard Earnings */
+        .earnings { display: flex; justify-content: space-around; padding: 10px; background: white; margin-bottom: 5px; }
+        .earn-item { text-align: center; }
+        .earn-item span { display: block; font-size: 10px; color: #777; }
+        .earn-item strong { font-size: 14px; }
 
-        /* Map Section */
-        #map { height: 300px; width: 100%; margin-top: 5px; border-bottom: 3px solid var(--primary); }
-
-        /* Floating Notification Pop-up */
+        /* Notification Popup */
         #notification-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); z-index: 2000; display: none;
-            flex-direction: column; justify-content: center; align-items: center; color: white; padding: 20px;
+            background: rgba(0,0,0,0.9); z-index: 2000; display: none;
+            flex-direction: column; justify-content: center; align-items: center; padding: 20px;
         }
-        .ride-request-card { background: var(--white); color: #000; width: 100%; border-radius: 20px; padding: 20px; text-align: center; }
-        
-        /* Slide to Accept Button */
-        .slide-container {
-            width: 100%; height: 60px; background: #eee; border-radius: 30px;
-            margin-top: 20px; position: relative; overflow: hidden;
-        }
-        .slide-text { position: absolute; width: 100%; text-align: center; line-height: 60px; font-weight: bold; color: #888; }
-        .slide-handle {
-            width: 60px; height: 100%; background: var(--green); border-radius: 30px;
-            display: flex; justify-content: center; align-items: center; color: white;
-            position: absolute; left: 0; cursor: pointer; z-index: 2; transition: 0.1s;
-        }
+        .request-card { background: white; width: 100%; border-radius: 20px; padding: 20px; text-align: center; animation: bounce 0.5s infinite alternate; }
+        @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-10px); } }
 
-        /* Post-Accept Details */
-        #active-ride-details { background: var(--white); margin: 15px; padding: 20px; border-radius: 15px; display: none; }
-        .info-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        /* Active Ride Panel */
+        #active-panel { background: white; margin: 15px; padding: 20px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); display: none; }
+        .customer-info { border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 10px; }
+        .btn-complete { width: 100%; padding: 15px; background: var(--dark); color: white; border: none; border-radius: 10px; font-weight: bold; }
 
-        /* Footer */
-        footer { position: fixed; bottom: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 10px; border-top: 1px solid #ddd; }
-        .foot-item { text-align: center; font-size: 10px; color: #777; }
-        .foot-item i { font-size: 18px; margin-bottom: 3px; }
-        .active-nav { color: var(--primary); }
+        /* Slide to Accept */
+        .slider-box { width: 100%; height: 60px; background: #f0f0f0; border-radius: 30px; position: relative; margin-top: 20px; overflow: hidden; }
+        .slider-text { position: absolute; width: 100%; text-align: center; line-height: 60px; color: #888; font-weight: bold; }
+        .slider-handle { width: 60px; height: 100%; background: var(--green); border-radius: 30px; position: absolute; left: 0; display: flex; justify-content: center; align-items: center; color: white; cursor: pointer; transition: 0.1s; z-index: 5; }
 
+        footer { position: fixed; bottom: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 12px; border-top: 1px solid #ddd; }
         .hidden { display: none; }
     </style>
 </head>
 <body>
 
-    <!-- Notification Sound -->
-    <audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2513/2513-preview.mp3" loop></audio>
+    <audio id="alert-sound" src="https://assets.mixkit.co/active_storage/sfx/2513/2513-preview.mp3" loop></audio>
 
     <header>
-        <div>
-            <div style="font-weight: bold; font-size: 18px;">RapidGo Captain</div>
-            <div class="captain-id" id="cap-id">ID: Loading...</div>
-        </div>
-        <div class="profile-icon"><i class="fas fa-motorcycle"></i></div>
+        <div><strong>RapidGo Captain</strong><br><small id="cap-id">ID: ...</small></div>
+        <div style="background: var(--primary); color: #000; padding: 5px 10px; border-radius: 10px; font-weight: bold;">Online</div>
     </header>
 
-    <!-- Earnings Dashboard -->
-    <div class="earnings-grid">
-        <div class="earn-card"><h4>Today</h4><p>৳ <span id="earn-today">0</span></p></div>
-        <div class="earn-card"><h4>Weekly</h4><p>৳ <span id="earn-week">0</span></p></div>
-        <div class="earn-card"><h4>Total</h4><p>৳ <span id="earn-total">0</span></p></div>
+    <div class="earnings">
+        <div class="earn-item"><span>Today</span><strong>৳ 450</strong></div>
+        <div class="earn-item"><span>Weekly</span><strong>৳ 2800</strong></div>
+        <div class="earn-item"><span>Total</span><strong>৳ 15,400</strong></div>
     </div>
 
-    <!-- Map View -->
     <div id="map"></div>
 
-    <!-- Incoming Ride Notification -->
+    <!-- Incoming Request Overlay -->
     <div id="notification-overlay">
-        <div class="ride-request-card">
-            <h2 style="color: var(--green);">New Ride Request!</h2>
-            <hr style="margin:15px 0;">
-            <p><strong>Pickup:</strong> <span id="req-pickup">...</span></p>
-            <p><strong>Distance:</strong> <span id="req-dist">0</span> KM</p>
-            <h3 style="margin-top:10px;">Fare: ৳ <span id="req-fare">0</span></h3>
-            
-            <div class="slide-container" id="slide-box">
-                <div class="slide-text">Slide to Accept</div>
-                <div class="slide-handle" id="slider"><i class="fas fa-arrow-right"></i></div>
+        <div class="request-card">
+            <h2 style="color: var(--green);">New Ride!</h2>
+            <p id="req-pickup" style="margin: 10px 0; font-weight: bold;">Pickup Location...</p>
+            <div style="display: flex; justify-content: space-around; margin: 15px 0;">
+                <div><span>Dist:</span> <br> <strong id="req-dist">2.5</strong> KM</div>
+                <div><span>Fare:</span> <br> <strong id="req-fare">৳ 120</strong></div>
+            </div>
+            <div class="slider-box" id="slider-box">
+                <div class="slider-text">Slide to Accept</div>
+                <div id="slider" class="slider-handle"><i class="fas fa-arrow-right"></i></div>
             </div>
         </div>
     </div>
 
-    <!-- Customer Details (After Accept) -->
-    <div id="active-ride-details">
-        <h4 style="margin-bottom: 15px; color: var(--green);"><i class="fas fa-check-circle"></i> Ride Accepted</h4>
-        <div class="info-row"><span>Customer:</span> <strong id="cust-name">John Doe</strong></div>
-        <div class="info-row"><span>Phone:</span> <strong id="cust-phone">017XXXXXXXX</strong></div>
-        <div class="info-row"><span>Status:</span> <span style="background:var(--primary); padding:2px 8px; border-radius:5px;">Heading to Pickup</span></div>
-        <button id="btn-complete" style="width:100%; padding:12px; background:var(--dark); color:white; border:none; border-radius:10px; margin-top:10px;">Complete Ride</button>
+    <!-- Active Ride Info -->
+    <div id="active-panel">
+        <div class="customer-info">
+            <p><strong>Customer:</strong> <span id="cust-name">...</span></p>
+            <p><strong>Phone:</strong> <a id="cust-phone" href="#">Call Now</a></p>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+            <span>Fare: ৳ <strong id="active-fare">0</strong></span>
+            <span>Distance: <strong id="active-dist">0</strong> KM</span>
+        </div>
+        <button class="btn-complete" id="btn-finish">COMPLETE RIDE</button>
     </div>
 
     <div style="height: 100px;"></div>
 
     <footer>
-        <div class="foot-item active-nav"><i class="fas fa-home"></i><p>Home</p></div>
-        <div class="foot-item"><i class="fas fa-chart-line"></i><p>Earnings</p></div>
-        <div class="foot-item"><i class="fas fa-money-check-alt"></i><p>Payout</p></div>
-        <div class="foot-item"><i class="fas fa-star"></i><p>Subscription</p></div>
+        <div style="color: var(--primary);"><i class="fas fa-home"></i><p style="font-size: 10px;">Home</p></div>
+        <div><i class="fas fa-wallet"></i><p style="font-size: 10px;">Payout</p></div>
+        <div><i class="fas fa-user-check"></i><p style="font-size: 10px;">Subscription</p></div>
     </footer>
 
-    <!-- Scripts -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { getDatabase, ref, onValue, update, onChildAdded } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAFUAATQoR0Kidzm9665tILTMNArFgKO9k",
@@ -144,101 +124,125 @@
         const db = getDatabase(app);
 
         let map, routingControl;
+        let isBusy = false; // এটি ডবল পপআপ আটকাবে
         let currentRideId = null;
         let driverLat, driverLng;
+        const appStartTime = Date.now(); // শুধুমাত্র অ্যাপ খোলার পরের রাইড দেখাবে
 
-        // --- 1. Init Map & Location ---
+        // --- 1. Init Map ---
         function initMap() {
-            map = L.map('map').setView([23.8103, 90.4125], 13);
+            map = L.map('map', { zoomControl: false }).setView([23.8103, 90.4125], 13);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
             navigator.geolocation.watchPosition((pos) => {
                 driverLat = pos.coords.latitude;
                 driverLng = pos.coords.longitude;
-                L.marker([driverLat, driverLng]).addTo(map).bindPopup("Your Location").openPopup();
-                map.setView([driverLat, driverLng]);
+                updateDriverLocation();
             });
         }
         initMap();
 
-        // --- 2. Real-time Ride Listener ---
+        function updateDriverLocation() {
+            if (auth.currentUser) {
+                update(ref(db, 'drivers/' + auth.currentUser.uid), {
+                    lat: driverLat, lng: driverLng, lastSeen: Date.now()
+                });
+            }
+        }
+
+        // --- 2. Listen for New Rides (Fixed to avoid spam) ---
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 document.getElementById('cap-id').innerText = "ID: " + user.uid.substring(0, 8).toUpperCase();
-                listenForRides();
-            }
-        });
-
-        function listenForRides() {
-            const ridesRef = ref(db, 'rides/');
-            onValue(ridesRef, (snapshot) => {
-                snapshot.forEach((child) => {
-                    const ride = child.val();
-                    if (ride.status === 'pending') {
-                        showNotification(child.key, ride);
+                
+                // শুধুমাত্র নতুন রাইড লিসেন করবে
+                const ridesRef = ref(db, 'rides/');
+                onChildAdded(ridesRef, (snapshot) => {
+                    const ride = snapshot.val();
+                    // শর্ত: পেন্ডিং রাইড, ড্রাইভার ফ্রি এবং রাইডটি নতুন হতে হবে
+                    if (ride.status === 'pending' && !isBusy && ride.timestamp > appStartTime) {
+                        triggerPopup(snapshot.key, ride);
                     }
                 });
-            });
-        }
-
-        // --- 3. Notification & Sound ---
-        function showNotification(rideId, rideData) {
-            currentRideId = rideId;
-            document.getElementById('req-pickup').innerText = rideData.pickup;
-            document.getElementById('req-dist').innerText = "2.5"; // Calculation logic needed
-            document.getElementById('req-fare').innerText = "120"; 
-            
-            document.getElementById('notification-overlay').style.display = 'flex';
-            document.getElementById('notif-sound').play();
-        }
-
-        // --- 4. Slide to Accept Logic ---
-        const slider = document.getElementById('slider');
-        const slideBox = document.getElementById('slide-box');
-        let isDragging = false;
-
-        slider.addEventListener('touchstart', (e) => isDragging = true);
-        slider.addEventListener('touchmove', (e) => {
-            if (!isDragging) return;
-            let x = e.touches[0].clientX - 50; 
-            if (x >= 0 && x <= slideBox.offsetWidth - 60) {
-                slider.style.left = x + 'px';
-            }
-            if (x >= slideBox.offsetWidth - 70) {
-                acceptRide();
-                isDragging = false;
             }
         });
 
-        function acceptRide() {
-            update(ref(db, 'rides/' + currentRideId), {
-                status: 'accepted',
-                driver_id: auth.currentUser.uid
-            }).then(() => {
-                document.getElementById('notif-sound').pause();
-                document.getElementById('notification-overlay').style.display = 'none';
-                document.getElementById('active-ride-details').style.display = 'block';
-                
-                // Show Route on Map (Dummy pickup coords for demo)
-                showRoute([driverLat, driverLng], [23.8000, 90.4000]); 
-            });
+        function triggerPopup(id, data) {
+            currentRideId = id;
+            document.getElementById('req-pickup').innerText = data.pickup;
+            document.getElementById('req-fare').innerText = "৳ 120"; // ডাইনামিক করা যাবে
+            document.getElementById('notification-overlay').style.display = 'flex';
+            document.getElementById('alert-sound').play();
         }
 
-        function showRoute(start, end) {
+        // --- 3. Slide to Accept Logic ---
+        const slider = document.getElementById('slider');
+        const sliderBox = document.getElementById('slider-box');
+        let dragging = false;
+
+        slider.addEventListener('touchstart', () => dragging = true);
+        slider.addEventListener('touchmove', (e) => {
+            if (!dragging) return;
+            let moveX = e.touches[0].clientX - 50;
+            if (moveX >= 0 && moveX <= sliderBox.offsetWidth - 60) {
+                slider.style.left = moveX + 'px';
+            }
+            if (moveX >= sliderBox.offsetWidth - 70) {
+                acceptRide();
+                dragging = false;
+            }
+        });
+
+        async function acceptRide() {
+            isBusy = true; // এখন আর কোনো পপআপ আসবে না
+            document.getElementById('alert-sound').pause();
+            document.getElementById('notification-overlay').style.display = 'none';
+
+            await update(ref(db, 'rides/' + currentRideId), {
+                status: 'accepted',
+                driver_id: auth.currentUser.uid,
+                driver_phone: "01800000000" // ড্রাইভারের নম্বর
+            });
+
+            // কাস্টমার ডাটাবেস থেকে তথ্য আনা (রিয়েল অ্যাপে এটি users নোড থেকে আসবে)
+            document.getElementById('cust-name').innerText = "User_" + currentRideId.substring(0,4);
+            document.getElementById('cust-phone').innerText = "01700000000";
+            document.getElementById('cust-phone').href = "tel:01700000000";
+            document.getElementById('active-fare').innerText = "120";
+            document.getElementById('active-dist').innerText = "2.5";
+            document.getElementById('active-panel').style.display = 'block';
+
+            showDirection();
+        }
+
+        // --- 4. Map Direction (Routing) ---
+        function showDirection() {
             if (routingControl) map.removeControl(routingControl);
+            
+            // ডেমো গন্তব্য (বাস্তবে কাস্টমারের ল্যাট-লং ডাটাবেস থেকে আসবে)
+            const destLat = driverLat + 0.01;
+            const destLng = driverLng + 0.01;
+
             routingControl = L.Routing.control({
-                waypoints: [L.latLng(start), L.latLng(end)],
-                routeWhileDragging: false
+                waypoints: [
+                    L.latLng(driverLat, driverLng),
+                    L.latLng(destLat, destLng)
+                ],
+                routeWhileDragging: false,
+                createMarker: function() { return null; } // এক্সট্রা মার্কার সরাতে
             }).addTo(map);
         }
 
-        // Complete Ride
-        document.getElementById('btn-complete').onclick = () => {
-            update(ref(db, 'rides/' + currentRideId), { status: 'completed' });
-            alert("Ride Finished! Earning Added.");
-            location.reload(); 
+        // --- 5. Finish Ride ---
+        document.getElementById('btn-finish').onclick = async () => {
+            await update(ref(db, 'rides/' + currentRideId), { status: 'completed' });
+            alert("Ride Completed Successfully!");
+            isBusy = false; // এখন আবার নতুন রাইড রিসিভ করা যাবে
+            document.getElementById('active-panel').style.display = 'none';
+            if (routingControl) map.removeControl(routingControl);
+            slider.style.left = '0px';
         };
 
     </script>
 </body>
-</html>
+                                           </html>
