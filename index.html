@@ -1,181 +1,244 @@
 <!DOCTYPE html>
-<html lang="bn">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bulk Product Scanner</title>
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <title>RapidGo - Captain Portal</title>
+    
+    <!-- CSS Dependencies -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+    
     <style>
-        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
-        body { background-color: #f4f7f9; margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center; }
-        .container { width: 100%; max-width: 700px; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
-        
-        #camera-area { width: 100%; height: 250px; background: #000; border-radius: 10px; overflow: hidden; margin-bottom: 15px; position: relative; }
-        video { width: 100%; height: 100%; object-fit: cover; }
-        
-        .controls { display: flex; gap: 10px; margin-bottom: 20px; }
-        button { flex: 1; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
-        .btn-scan { background: #007bff; color: white; }
-        .btn-upload { background: #6c757d; color: white; }
-        .btn-save { background: #28a745; color: white; width: 100%; margin-top: 20px; font-size: 16px; }
+        :root { --primary: #FFD700; --dark: #121212; --green: #28a745; --white: #fff; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
+        body { background: #f0f0f0; overflow-x: hidden; }
 
-        /* Scanned Table List */
-        .scanned-list { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        .scanned-list th, .scanned-list td { padding: 10px; border-bottom: 1px solid #ddd; text-align: left; }
-        .scanned-list th { background: #f8f9fa; font-size: 13px; color: #555; }
-        input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+        /* Header & Profile */
+        header { background: var(--dark); padding: 15px; display: flex; justify-content: space-between; align-items: center; color: var(--primary); position: sticky; top: 0; z-index: 1000; }
+        .captain-id { font-size: 12px; color: #aaa; }
+        .profile-icon { width: 35px; height: 35px; background: var(--primary); border-radius: 50%; display: flex; justify-content: center; align-items: center; color: #000; }
+
+        /* Earnings Dashboard */
+        .earnings-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; padding: 15px; }
+        .earn-card { background: var(--white); padding: 15px 10px; border-radius: 12px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .earn-card h4 { font-size: 11px; color: #666; margin-bottom: 5px; }
+        .earn-card p { font-size: 14px; font-weight: bold; color: var(--dark); }
+
+        /* Map Section */
+        #map { height: 300px; width: 100%; margin-top: 5px; border-bottom: 3px solid var(--primary); }
+
+        /* Floating Notification Pop-up */
+        #notification-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); z-index: 2000; display: none;
+            flex-direction: column; justify-content: center; align-items: center; color: white; padding: 20px;
+        }
+        .ride-request-card { background: var(--white); color: #000; width: 100%; border-radius: 20px; padding: 20px; text-align: center; }
         
-        .status { text-align: center; color: #007bff; font-weight: bold; margin: 10px 0; }
-        .delete-btn { background: #ff4d4d; color: white; padding: 5px 10px; border-radius: 4px; border: none; font-size: 12px; }
-        canvas { display: none; }
+        /* Slide to Accept Button */
+        .slide-container {
+            width: 100%; height: 60px; background: #eee; border-radius: 30px;
+            margin-top: 20px; position: relative; overflow: hidden;
+        }
+        .slide-text { position: absolute; width: 100%; text-align: center; line-height: 60px; font-weight: bold; color: #888; }
+        .slide-handle {
+            width: 60px; height: 100%; background: var(--green); border-radius: 30px;
+            display: flex; justify-content: center; align-items: center; color: white;
+            position: absolute; left: 0; cursor: pointer; z-index: 2; transition: 0.1s;
+        }
+
+        /* Post-Accept Details */
+        #active-ride-details { background: var(--white); margin: 15px; padding: 20px; border-radius: 15px; display: none; }
+        .info-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+
+        /* Footer */
+        footer { position: fixed; bottom: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 10px; border-top: 1px solid #ddd; }
+        .foot-item { text-align: center; font-size: 10px; color: #777; }
+        .foot-item i { font-size: 18px; margin-bottom: 3px; }
+        .active-nav { color: var(--primary); }
+
+        .hidden { display: none; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2 style="text-align: center; margin-top: 0;">Bulk Table Scanner</h2>
+    <!-- Notification Sound -->
+    <audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2513/2513-preview.mp3" loop></audio>
 
-    <div id="camera-area">
-        <video id="video" autoplay playsinline></video>
+    <header>
+        <div>
+            <div style="font-weight: bold; font-size: 18px;">RapidGo Captain</div>
+            <div class="captain-id" id="cap-id">ID: Loading...</div>
+        </div>
+        <div class="profile-icon"><i class="fas fa-motorcycle"></i></div>
+    </header>
+
+    <!-- Earnings Dashboard -->
+    <div class="earnings-grid">
+        <div class="earn-card"><h4>Today</h4><p>৳ <span id="earn-today">0</span></p></div>
+        <div class="earn-card"><h4>Weekly</h4><p>৳ <span id="earn-week">0</span></p></div>
+        <div class="earn-card"><h4>Total</h4><p>৳ <span id="earn-total">0</span></p></div>
     </div>
 
-    <div class="controls">
-        <button class="btn-scan" id="captureBtn">📸 Scan Entire Table</button>
-        <button class="btn-upload" onclick="document.getElementById('fileInput').click()">📁 Upload</button>
-        <input type="file" id="fileInput" accept="image/*" style="display:none;">
-    </div>
+    <!-- Map View -->
+    <div id="map"></div>
 
-    <div id="status" class="status">Ready to scan...</div>
-
-    <!-- Scanned Items View -->
-    <table class="scanned-list">
-        <thead>
-            <tr>
-                <th style="width: 40%;">Name</th>
-                <th style="width: 25%;">Price</th>
-                <th style="width: 20%;">Qty</th>
-                <th style="width: 15%;">Action</th>
-            </tr>
-        </thead>
-        <tbody id="resultBody">
-            <!-- Rows will be added here dynamically -->
-        </tbody>
-    </table>
-
-    <button class="btn-save" id="saveAllBtn" style="display: none;">Save All to Firebase</button>
-</div>
-
-<canvas id="canvas"></canvas>
-
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-    // Firebase Config
-    const firebaseConfig = {
-        apiKey: "AIzaSyD_MJAYCk5JZuOn6_YwsBC86gBKxwC_EKY",
-        authDomain: "cosmatic-a7f73.firebaseapp.com",
-        databaseURL: "https://cosmatic-a7f73-default-rtdb.asia-southeast1.firebasedatabase.app",
-        projectId: "cosmatic-a7f73",
-        storageBucket: "cosmatic-a7f73.firebasestorage.app",
-        messagingSenderId: "693000942896",
-        appId: "1:693000942896:web:5208e137c75e62749c44f5",
-        measurementId: "G-L7FNN9G0NY"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    const video = document.getElementById('video');
-    const resultBody = document.getElementById('resultBody');
-    const status = document.getElementById('status');
-    const saveAllBtn = document.getElementById('saveAllBtn');
-
-    // Start Camera
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-        .then(stream => video.srcObject = stream);
-
-    // OCR function for multiple rows
-    async function scanImage(source) {
-        status.innerText = "Processing multiple rows... please wait";
-        try {
-            const result = await Tesseract.recognize(source, 'eng');
-            const lines = result.data.text.split('\n').map(l => l.trim()).filter(l => l.length > 2);
+    <!-- Incoming Ride Notification -->
+    <div id="notification-overlay">
+        <div class="ride-request-card">
+            <h2 style="color: var(--green);">New Ride Request!</h2>
+            <hr style="margin:15px 0;">
+            <p><strong>Pickup:</strong> <span id="req-pickup">...</span></p>
+            <p><strong>Distance:</strong> <span id="req-dist">0</span> KM</p>
+            <h3 style="margin-top:10px;">Fare: ৳ <span id="req-fare">0</span></h3>
             
-            // Filter out headers like "Name", "Price", "Example"
-            const filteredLines = lines.filter(line => !/Name|Price|Quantity|Example/i.test(line));
+            <div class="slide-container" id="slide-box">
+                <div class="slide-text">Slide to Accept</div>
+                <div class="slide-handle" id="slider"><i class="fas fa-arrow-right"></i></div>
+            </div>
+        </div>
+    </div>
 
-            filteredLines.forEach(line => {
-                const parts = line.split(/\s+/);
-                if (parts.length >= 2) {
-                    const name = parts[0];
-                    const price = parts[1] || "0";
-                    const qty = parts[2] || "1";
-                    addRowToTable(name, price, qty);
-                }
+    <!-- Customer Details (After Accept) -->
+    <div id="active-ride-details">
+        <h4 style="margin-bottom: 15px; color: var(--green);"><i class="fas fa-check-circle"></i> Ride Accepted</h4>
+        <div class="info-row"><span>Customer:</span> <strong id="cust-name">John Doe</strong></div>
+        <div class="info-row"><span>Phone:</span> <strong id="cust-phone">017XXXXXXXX</strong></div>
+        <div class="info-row"><span>Status:</span> <span style="background:var(--primary); padding:2px 8px; border-radius:5px;">Heading to Pickup</span></div>
+        <button id="btn-complete" style="width:100%; padding:12px; background:var(--dark); color:white; border:none; border-radius:10px; margin-top:10px;">Complete Ride</button>
+    </div>
+
+    <div style="height: 100px;"></div>
+
+    <footer>
+        <div class="foot-item active-nav"><i class="fas fa-home"></i><p>Home</p></div>
+        <div class="foot-item"><i class="fas fa-chart-line"></i><p>Earnings</p></div>
+        <div class="foot-item"><i class="fas fa-money-check-alt"></i><p>Payout</p></div>
+        <div class="foot-item"><i class="fas fa-star"></i><p>Subscription</p></div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAFUAATQoR0Kidzm9665tILTMNArFgKO9k",
+            authDomain: "school-websit-9c152.firebaseapp.com",
+            databaseURL: "https://school-websit-9c152-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "school-websit-9c152",
+            storageBucket: "school-websit-9c152.firebasestorage.app",
+            messagingSenderId: "591107596339",
+            appId: "1:591107596339:web:7ea49a657abd08f1f20346"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+
+        let map, routingControl;
+        let currentRideId = null;
+        let driverLat, driverLng;
+
+        // --- 1. Init Map & Location ---
+        function initMap() {
+            map = L.map('map').setView([23.8103, 90.4125], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+            navigator.geolocation.watchPosition((pos) => {
+                driverLat = pos.coords.latitude;
+                driverLng = pos.coords.longitude;
+                L.marker([driverLat, driverLng]).addTo(map).bindPopup("Your Location").openPopup();
+                map.setView([driverLat, driverLng]);
             });
-
-            status.innerText = "Scan Complete! Check the list below.";
-            saveAllBtn.style.display = "block";
-        } catch (e) {
-            status.innerText = "Error: " + e.message;
         }
-    }
+        initMap();
 
-    // Function to add a row to the HTML table
-    function addRowToTable(name, price, qty) {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td><input type="text" value="${name}" class="row-name"></td>
-            <td><input type="text" value="${price}" class="row-price"></td>
-            <td><input type="number" value="${qty}" class="row-qty"></td>
-            <td><button class="delete-btn" onclick="this.parentElement.parentElement.remove()">Del</button></td>
-        `;
-        resultBody.appendChild(tr);
-    }
-
-    // Capture Event
-    document.getElementById('captureBtn').addEventListener('click', () => {
-        const canvas = document.getElementById('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        canvas.getContext('2d').drawImage(video, 0, 0);
-        scanImage(canvas.toDataURL('image/png'));
-    });
-
-    // Upload Event
-    document.getElementById('fileInput').addEventListener('change', (e) => {
-        const reader = new FileReader();
-        reader.onload = () => scanImage(reader.result);
-        reader.readAsDataURL(e.target.files[0]);
-    });
-
-    // Save All to Firebase
-    saveAllBtn.addEventListener('click', async () => {
-        const rows = document.querySelectorAll('#resultBody tr');
-        if (rows.length === 0) return alert("No items to save!");
-
-        status.innerText = "Saving all items to Firebase...";
-        
-        try {
-            for (let row of rows) {
-                const name = row.querySelector('.row-name').value;
-                const price = row.querySelector('.row-price').value;
-                const qty = row.querySelector('.row-qty').value;
-
-                await addDoc(collection(db, "medicine_inventory"), {
-                    name, price, qty, timestamp: serverTimestamp()
-                });
+        // --- 2. Real-time Ride Listener ---
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                document.getElementById('cap-id').innerText = "ID: " + user.uid.substring(0, 8).toUpperCase();
+                listenForRides();
             }
-            alert("All items saved successfully!");
-            resultBody.innerHTML = "";
-            saveAllBtn.style.display = "none";
-            status.innerText = "Ready to scan...";
-        } catch (e) {
-            alert("Error saving: " + e.message);
-        }
-    });
-</script>
+        });
 
+        function listenForRides() {
+            const ridesRef = ref(db, 'rides/');
+            onValue(ridesRef, (snapshot) => {
+                snapshot.forEach((child) => {
+                    const ride = child.val();
+                    if (ride.status === 'pending') {
+                        showNotification(child.key, ride);
+                    }
+                });
+            });
+        }
+
+        // --- 3. Notification & Sound ---
+        function showNotification(rideId, rideData) {
+            currentRideId = rideId;
+            document.getElementById('req-pickup').innerText = rideData.pickup;
+            document.getElementById('req-dist').innerText = "2.5"; // Calculation logic needed
+            document.getElementById('req-fare').innerText = "120"; 
+            
+            document.getElementById('notification-overlay').style.display = 'flex';
+            document.getElementById('notif-sound').play();
+        }
+
+        // --- 4. Slide to Accept Logic ---
+        const slider = document.getElementById('slider');
+        const slideBox = document.getElementById('slide-box');
+        let isDragging = false;
+
+        slider.addEventListener('touchstart', (e) => isDragging = true);
+        slider.addEventListener('touchmove', (e) => {
+            if (!isDragging) return;
+            let x = e.touches[0].clientX - 50; 
+            if (x >= 0 && x <= slideBox.offsetWidth - 60) {
+                slider.style.left = x + 'px';
+            }
+            if (x >= slideBox.offsetWidth - 70) {
+                acceptRide();
+                isDragging = false;
+            }
+        });
+
+        function acceptRide() {
+            update(ref(db, 'rides/' + currentRideId), {
+                status: 'accepted',
+                driver_id: auth.currentUser.uid
+            }).then(() => {
+                document.getElementById('notif-sound').pause();
+                document.getElementById('notification-overlay').style.display = 'none';
+                document.getElementById('active-ride-details').style.display = 'block';
+                
+                // Show Route on Map (Dummy pickup coords for demo)
+                showRoute([driverLat, driverLng], [23.8000, 90.4000]); 
+            });
+        }
+
+        function showRoute(start, end) {
+            if (routingControl) map.removeControl(routingControl);
+            routingControl = L.Routing.control({
+                waypoints: [L.latLng(start), L.latLng(end)],
+                routeWhileDragging: false
+            }).addTo(map);
+        }
+
+        // Complete Ride
+        document.getElementById('btn-complete').onclick = () => {
+            update(ref(db, 'rides/' + currentRideId), { status: 'completed' });
+            alert("Ride Finished! Earning Added.");
+            location.reload(); 
+        };
+
+    </script>
 </body>
-  </html>
+</html>
